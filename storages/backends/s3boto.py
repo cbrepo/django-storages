@@ -189,9 +189,6 @@ class S3BotoStorage(Storage):
 
         content.name = cleaned_name
         k = self._get_key(name)
-        if not k:
-            k = self.bucket.new_key(self._encode_name(name))
-
         k.set_metadata('Content-Type',content_type)
         k.set_contents_from_file(content, headers=headers, policy=self.acl,
                                  reduced_redundancy=self.reduced_redundancy)
@@ -214,9 +211,7 @@ class S3BotoStorage(Storage):
 
     def exists(self, name):
         name = self._normalize_name(self._clean_name(name))
-        if self.entries:
-            return name in self.entries
-        k = self.bucket.new_key(self._encode_name(name))
+        k = self._get_key(name)
         return k.exists()
 
     def listdir(self, name):
