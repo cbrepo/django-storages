@@ -126,7 +126,8 @@ class S3BotoStorage(Storage):
         if key_name in self.entries:
             return self.entries[key_name]
         else:
-            self.entries[key_name] = self.bucket.new_key(key_name)
+            k = self.bucket.get_key(key_name)
+            self.entries[key_name] = k or self.bucket.new_key(key_name)
 
         return self.entries[key_name]
 
