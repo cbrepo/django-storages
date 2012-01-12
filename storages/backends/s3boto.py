@@ -197,6 +197,17 @@ class S3BotoStorage(Storage):
                                  reduced_redundancy=self.reduced_redundancy)
         return cleaned_name
 
+    def _get_key(self, name):
+        """ Get this key from the bucket, if not already in the entries """
+        key_name = self._encode_name(name)
+
+        if key_name in self.entries:
+            return self.entries[key_name]
+        else:
+            self.entries[key_name] = self.bucket.new_key(key_name)
+
+        return self.entries[key_name]
+
     def delete(self, name):
         name = self._normalize_name(self._clean_name(name))
         self.bucket.delete_key(self._encode_name(name))
@@ -275,7 +286,7 @@ class S3BotoStorageFile(File):
         self._storage = storage
         self.name = name[len(self._storage.location):].lstrip('/')
         self._mode = mode
-        self.key = storage.bucket.get_key(self._storage._encode_name(name))
+        self.key = storage._get_key(name)
         self._is_dirty = False
         self._file = None
 
