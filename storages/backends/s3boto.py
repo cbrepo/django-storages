@@ -130,6 +130,13 @@ class S3BotoStorage(Storage):
 
         return self.entries[key_name]
 
+    def _delete_key(self, name):
+        """ Delete this key from the bucket and from the entries """
+        key_name = self._encode_name(name)
+
+        self.entries.pop(key_name, None)
+        self.bucket.delete_key(key_name)
+
     def _get_access_keys(self):
         access_key = ACCESS_KEY_NAME
         secret_key = SECRET_KEY_NAME
@@ -207,7 +214,7 @@ class S3BotoStorage(Storage):
 
     def delete(self, name):
         name = self._normalize_name(self._clean_name(name))
-        self.bucket.delete_key(self._encode_name(name))
+        self._delete_key(name)
 
     def exists(self, name):
         name = self._normalize_name(self._clean_name(name))
