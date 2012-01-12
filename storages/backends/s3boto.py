@@ -188,7 +188,7 @@ class S3BotoStorage(Storage):
             headers.update({'Content-Encoding': 'gzip'})
 
         content.name = cleaned_name
-        k = self.bucket.get_key(self._encode_name(name))
+        k = self._get_key(name)
         if not k:
             k = self.bucket.new_key(self._encode_name(name))
 
@@ -243,7 +243,7 @@ class S3BotoStorage(Storage):
             if entry:
                 return entry.size
             return 0
-        return self.bucket.get_key(self._encode_name(name)).size
+        return self._get_key(name).size
 
     def modified_time(self, name):
         try:
@@ -251,11 +251,7 @@ class S3BotoStorage(Storage):
         except ImportError:
             raise NotImplementedError()
         name = self._normalize_name(self._clean_name(name))
-        entry = self.entries.get(name)
-        # only call self.bucket.get_key() if the key is not found
-        # in the preloaded metadata.
-        if entry is None:
-            entry = self.bucket.get_key(self._encode_name(name))
+        entry = self._get_key(name)
         # convert to string to date
         last_modified_date = parser.parse(entry.last_modified)
         # if the date has no timzone, assume UTC
