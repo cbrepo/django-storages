@@ -119,6 +119,17 @@ class S3BotoStorage(Storage):
                                 for entry in self.bucket.list())
         return self._entries
 
+    def _get_key(self, name):
+        """ Get this key from the bucket, if not already in the entries """
+        key_name = self._encode_name(name)
+
+        if key_name in self.entries:
+            return self.entries[key_name]
+        else:
+            self.entries[key_name] = self.bucket.new_key(key_name)
+
+        return self.entries[key_name]
+
     def _get_access_keys(self):
         access_key = ACCESS_KEY_NAME
         secret_key = SECRET_KEY_NAME
@@ -193,17 +204,6 @@ class S3BotoStorage(Storage):
         k.set_contents_from_file(content, headers=headers, policy=self.acl,
                                  reduced_redundancy=self.reduced_redundancy)
         return cleaned_name
-
-    def _get_key(self, name):
-        """ Get this key from the bucket, if not already in the entries """
-        key_name = self._encode_name(name)
-
-        if key_name in self.entries:
-            return self.entries[key_name]
-        else:
-            self.entries[key_name] = self.bucket.new_key(key_name)
-
-        return self.entries[key_name]
 
     def delete(self, name):
         name = self._normalize_name(self._clean_name(name))
