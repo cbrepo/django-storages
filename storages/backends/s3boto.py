@@ -124,12 +124,13 @@ class S3BotoStorage(Storage):
         key_name = self._encode_name(name)
 
         if key_name in self.entries:
-            return self.entries[key_name]
+            key = self.entries[key_name]
         else:
-            k = self.bucket.get_key(key_name)
-            self.entries[key_name] = k or self.bucket.new_key(key_name)
+            key = self.bucket.get_key(key_name)
+            if key:
+                self.entries[key_name] = key
 
-        return self.entries[key_name]
+        return key
 
     def _delete_key(self, name):
         """ Delete this key from the bucket and from the entries """
