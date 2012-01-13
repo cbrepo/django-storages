@@ -215,6 +215,9 @@ class S3BotoStorage(Storage):
         k.set_metadata('Content-Type',content_type)
         k.set_contents_from_file(content, headers=headers, policy=self.acl,
                                  reduced_redundancy=self.reduced_redundancy)
+
+        # Add to entries cache before leaving
+        self.entries[self._encode_name(name)] = k
         return cleaned_name
 
     def delete(self, name):
