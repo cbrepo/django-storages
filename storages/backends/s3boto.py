@@ -227,10 +227,15 @@ class S3BotoStorage(Storage):
 
     def exists(self, name):
         name = self._normalize_name(self._clean_name(name))
-        if self.entries:
-            return name in self.entries
+        if self.entries and name in self.entries:
+            return True
         k = self.bucket.new_key(self._encode_name(name))
-        return k.exists()
+        if k.exists():
+            if self.entries:
+                # Update this key in the cache; it has been created in another process
+                self._entries[self._encode_name(name)] = k
+            return True
+        return False
 
     def listdir(self, name):
         name = self._normalize_name(self._clean_name(name))
