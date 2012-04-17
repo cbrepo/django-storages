@@ -127,8 +127,8 @@ class S3BotoStorage(Storage):
             key = self.entries[key_name]
         else:
             key = self.bucket.get_key(key_name)
-            if key:
-                self.entries[key_name] = key
+            if key and self.preload_metadata:
+                self._entries[key_name] = key
 
         return key
 
@@ -136,7 +136,7 @@ class S3BotoStorage(Storage):
         """ Delete this key from the bucket and from the entries """
         key_name = self._encode_name(name)
 
-        self.entries.pop(key_name, None)
+        self._entries.pop(key_name, None) # Remove from preloaded cache, if we're using that
         self.bucket.delete_key(key_name)
 
     def _get_access_keys(self):
@@ -217,7 +217,8 @@ class S3BotoStorage(Storage):
                                  reduced_redundancy=self.reduced_redundancy)
 
         # Add to entries cache before leaving
-        self.entries[self._encode_name(name)] = k
+        if self.preload_metadata:
+            self._entries[self._encode_name(name)] = k
         return cleaned_name
 
     def delete(self, name):
