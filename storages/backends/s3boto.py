@@ -119,6 +119,26 @@ class S3BotoStorage(Storage):
                                 for entry in self.bucket.list())
         return self._entries
 
+    def _get_key(self, name):
+        """ Get this key from the bucket, if not already in the entries """
+        key_name = self._encode_name(name)
+
+        if key_name in self.entries:
+            key = self.entries[key_name]
+        else:
+            key = self.bucket.get_key(key_name)
+            if key:
+                self.entries[key_name] = key
+
+        return key
+
+    def _delete_key(self, name):
+        """ Delete this key from the bucket and from the entries """
+        key_name = self._encode_name(name)
+
+        self.entries.pop(key_name, None)
+        self.bucket.delete_key(key_name)
+
     def _get_access_keys(self):
         access_key = ACCESS_KEY_NAME
         secret_key = SECRET_KEY_NAME
@@ -188,29 +208,21 @@ class S3BotoStorage(Storage):
             headers.update({'Content-Encoding': 'gzip'})
 
         content.name = cleaned_name
-        k = self.bucket.get_key(self._encode_name(name))
+        k = self._get_key(name)
         if not k:
             k = self.bucket.new_key(self._encode_name(name))
 
         k.set_metadata('Content-Type',content_type)
         k.set_contents_from_file(content, headers=headers, policy=self.acl,
                                  reduced_redundancy=self.reduced_redundancy)
+
+        # Add to entries cache before leaving
+        self.entries[self._encode_name(name)] = k
         return cleaned_name
-
-    def _get_key(self, name):
-        """ Get this key from the bucket, if not already in the entries """
-        key_name = self._encode_name(name)
-
-        if key_name in self.entries:
-            return self.entries[key_name]
-        else:
-            self.entries[key_name] = self.bucket.new_key(key_name)
-
-        return self.entries[key_name]
 
     def delete(self, name):
         name = self._normalize_name(self._clean_name(name))
-        self.bucket.delete_key(self._encode_name(name))
+        self._delete_key(name)
 
     def exists(self, name):
         name = self._normalize_name(self._clean_name(name))
@@ -243,7 +255,7 @@ class S3BotoStorage(Storage):
             if entry:
                 return entry.size
             return 0
-        return self.bucket.get_key(self._encode_name(name)).size
+        return self._get_key(name).size
 
     def modified_time(self, name):
         try:
@@ -251,11 +263,7 @@ class S3BotoStorage(Storage):
         except ImportError:
             raise NotImplementedError()
         name = self._normalize_name(self._clean_name(name))
-        entry = self.entries.get(name)
-        # only call self.bucket.get_key() if the key is not found
-        # in the preloaded metadata.
-        if entry is None:
-            entry = self.bucket.get_key(self._encode_name(name))
+        entry = self._get_key(name)
         # convert to string to date
         last_modified_date = parser.parse(entry.last_modified)
         # if the date has no timzone, assume UTC
